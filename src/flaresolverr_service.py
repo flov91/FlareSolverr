@@ -123,6 +123,8 @@ def _controller_v1_handler(req: V1RequestBase) -> V1ResponseBase:
     # set default values
     if req.maxTimeout is None or int(req.maxTimeout) < 1:
         req.maxTimeout = 60000
+    if req.waitInSeconds:
+        req.maxTimeout += ((req.waitInSeconds + 10) * 1000)
 
     # execute the command
     res: V1ResponseBase

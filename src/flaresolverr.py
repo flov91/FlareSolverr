@@ -78,6 +78,7 @@ if __name__ == "__main__":
     log_level = os.environ.get('LOG_LEVEL', 'info').upper()
     log_html = utils.get_config_log_html()
     headless = utils.get_config_headless()
+    display = utils.get_config_display()
     server_host = os.environ.get('HOST', '0.0.0.0')
     server_port = int(os.environ.get('PORT', 8191))
 

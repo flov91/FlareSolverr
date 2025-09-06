@@ -31,6 +31,7 @@ RUN dpkg -i /libgl1-mesa-dri.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends chromium chromium-common chromium-driver xvfb dumb-init \
         procps curl vim xauth \
+        x11vnc websockify wget curl \
     # Remove temporary files and hardware decoding libraries
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /usr/lib/x86_64-linux-gnu/libmfxhw* \
@@ -53,8 +54,13 @@ RUN mkdir -p "/app/.config/chromium/Crash Reports/pending"
 COPY src .
 COPY package.json ../
 
+RUN mkdir -p /app/novnc && \
+    curl -L https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz | tar xz --strip 1 -C /app/novnc && \
+    ln -s /app/novnc/vnc.html /app/novnc/index.html
+
 EXPOSE 8191
 EXPOSE 8192
+EXPOSE 8080
 
 # dumb-init avoids zombie chromium processes
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

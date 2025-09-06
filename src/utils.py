@@ -8,6 +8,8 @@ import sys
 import tempfile
 import urllib.parse
 
+import subprocess
+
 from selenium.webdriver.chrome.webdriver import WebDriver
 import undetected_chromedriver as uc
 
@@ -27,6 +29,19 @@ def get_config_log_html() -> bool:
 def get_config_headless() -> bool:
     return os.environ.get('HEADLESS', 'true').lower() == 'true'
 
+
+def get_config_display() -> str:
+    if os.environ.get('DISPLAY'):
+        return os.environ.get('DISPLAY')
+    else:
+        os.environ['DISPLAY'] = ':99'
+        return ':99'
+    
+def get_config_password() -> str:
+    if os.environ.get('PASSWORD'):
+        return os.environ.get('PASSWORD')
+    else:
+        return None
 
 def get_flaresolverr_version() -> str:
     global FLARESOLVERR_VERSION
@@ -168,9 +183,17 @@ def get_webdriver(proxy: dict = None) -> WebDriver:
         if os.name == 'nt':
             windows_headless = True
         else:
-            start_xvfb_display()
+            # start_xvfb_display()
+            start_xvfb()
+            start_x11vnc()
+            start_novnc()
     # For normal headless mode:
     # options.add_argument('--headless')
+    else:
+        start_xvfb(get_config_display())
+        start_x11vnc(get_config_display(), 5900, get_config_password())
+        start_novnc()
+
 
     # if we are inside the Docker container, we avoid downloading the driver
     driver_exe_path = None
@@ -330,6 +353,49 @@ def start_xvfb_display():
         from xvfbwrapper import Xvfb
         XVFB_DISPLAY = Xvfb()
         XVFB_DISPLAY.start()
+
+def start_xvfb(display=":99", screen=0):
+    cmd = ["Xvfb", display, "-screen", str(screen), "1920x1080x24"]
+    p = subprocess.Popen(cmd)
+    return p
+
+def start_x11vnc(display=":99", port=5900, password=None):
+    """
+    Start x11vnc server on the specified X display.
+
+    Args:
+        display (str): The X display to connect to, e.g. ':0' or ':99'.
+        port (int): The TCP port for VNC (default 5900).
+        password (str or None): Optional password for VNC authentication.
+
+    Returns:
+        subprocess.Popen: The running x11vnc process.
+    """
+    cmd = [
+        "x11vnc", 
+        "-display", display,
+        "-nopw",         # disable password prompt if no password is provided
+        "-forever",      # keep running after client disconnects
+        "-shared",       # allow multiple clients
+        "-rfbport", str(port),
+        "-listen", "0.0.0.0"
+    ]
+
+    if password:
+        cmd.remove("-nopw")
+        cmd.extend(["-passwd", password])
+
+    p = subprocess.Popen(cmd)
+    return p
+
+def start_novnc(exposed_port=8080, port=5900):
+    """
+    """
+    host = "localhost" + ':' + str(port)
+
+    cmd = ["/app/novnc/utils/novnc_proxy", "--vnc", host, "--listen", str(exposed_port)]
+    p = subprocess.Popen(cmd)
+    return p
 
 
 def object_to_dict(_object):
